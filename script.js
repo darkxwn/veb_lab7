@@ -3,6 +3,8 @@ ymaps.ready(startApp);
 google.charts.load('current', { packages: ['corechart'] });
 
 function startApp() {
+    console.log('✅ Yandex Maps API успешно загружен');
+
     const origin = [48.002263, 37.805214];   // Площадь Ленина
     const target = [48.021074, 37.810052];   // Донбасс Арена
 
@@ -19,9 +21,12 @@ function startApp() {
     });
     myMap.geoObjects.add(area);
 
+    console.log('🗺 Карта инициализирована');
+
     // === Основной маршрут ===
     ymaps.route([origin, target])
         .then(function (route) {
+            console.log('✅ Маршрут построен');
             myMap.geoObjects.add(route);
 
             const km = (route.getLength() / 1000).toFixed(2);
@@ -35,6 +40,7 @@ function startApp() {
             myMap.geoObjects.add(new ymaps.Placemark([48.008387, 37.803934], { iconCaption: "Библиотека" }));
         })
         .catch(function (err) {
+            console.error('❌ Ошибка построения основного маршрута:', err);
             document.getElementById("route-info").innerHTML = 
                 `<span style="color:red">Ошибка маршрута: ${err.message || err}</span>`;
         });
@@ -45,11 +51,11 @@ function startApp() {
 
 function prepareComparison(startPoint) {
     const points = [
-        ["Арена", [48.0210, 37.8101]],
-        ["Вокзал", [48.0436, 37.7461]],
-        ["Парк Щербакова", [47.9950, 37.7906]],
+        ["Арена", [48.0210, 37.8100]],
+        ["Вокзал", [48.0430, 37.7440]],
+        ["Парк", [47.9950, 37.7906]],
         ["Донецк-Сити", [48.0303, 37.7874]],
-        ["Цирк Космос", [47.9897, 37.7905]]
+        ["Цирк", [47.9897, 37.7905]]
     ];
 
     const chartData = [];
@@ -65,7 +71,8 @@ function prepareComparison(startPoint) {
                 }
             })
             .catch(function (err) {
-                readyCount++; // продолжаем, даже если один маршрут упал
+                console.error(`❌ Ошибка маршрута до ${item[0]}:`, err);
+                readyCount++; // продолжаем, даже если один упал
                 if (readyCount === points.length) {
                     drawGoogleChart(chartData);
                 }
@@ -75,12 +82,13 @@ function prepareComparison(startPoint) {
 
 function drawGoogleChart(finalData) {
     if (finalData.length === 0) {
-        document.getElementById("chart").innerHTML = 
-            '<p style="color:red">Нет данных для графика</p>';
+        console.warn('⚠ Нет данных для графика');
+        document.getElementById("chart").innerHTML = '<p style="color:red">Нет данных для графика (все маршруты упали)</p>';
         return;
     }
 
     google.charts.setOnLoadCallback(function () {
+        console.log('✅ Google Charts рисует график');
         const table = new google.visualization.DataTable();
         table.addColumn('string', 'Направление');
         table.addColumn('number', 'Километры');
