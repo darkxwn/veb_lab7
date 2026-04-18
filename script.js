@@ -1,19 +1,20 @@
-// Ожидание готовности библиотек
 ymaps.ready(startApp);
 google.charts.load('current', { packages: ['corechart'] });
 
 function startApp() {
-    console.log('✅ Yandex Maps API успешно загружен');
+    // Площадь Ленина
+    const origin = [48.002263, 37.805214];
+    
+    // Донбасс Арена
+    const target = [48.021074, 37.810052];
 
-    const origin = [48.002263, 37.805214];   // Площадь Ленина
-    const target = [48.021074, 37.810052];   // Донбасс Арена
-
+    // Создание карты
     const myMap = new ymaps.Map("map", {
         center: origin,
         zoom: 14
     });
 
-    // Круг
+    // Добавление круга 
     const area = new ymaps.Circle([origin, 500], {}, {
         fillColor: "#3498db33",
         strokeColor: "#3498db",
@@ -21,58 +22,55 @@ function startApp() {
     });
     myMap.geoObjects.add(area);
 
-    console.log('🗺 Карта инициализирована');
-
-    // === Основной маршрут ===
+    // Построение основного маршрута 
     ymaps.route([origin, target])
         .then(function (route) {
-            console.log('✅ Маршрут построен');
+            // Добавляем маршрут на карту
             myMap.geoObjects.add(route);
-
+            // Расчет расстояния в километрах и времени в минутах
             const km = (route.getLength() / 1000).toFixed(2);
             const min = Math.round(route.getTime() / 60);
 
+            // Вывод информации о маршруте пользователю
             document.getElementById("route-info").innerHTML = 
-                `✅ Длина пути <b>${km}</b> км • Время в дороге <b>${min}</b> мин`;
+                `Длина пути <b>${km}</b> км • Время в дороге <b>${min}</b> мин`;
 
-            // Метки
+            // Добавление меток достопримечательностей
             myMap.geoObjects.add(new ymaps.Placemark([48.006043, 37.802729], { iconCaption: "Театр" }));
             myMap.geoObjects.add(new ymaps.Placemark([48.008387, 37.803934], { iconCaption: "Библиотека" }));
-        })
-        .catch(function (err) {
-            console.error('❌ Ошибка построения основного маршрута:', err);
+        }).catch(function (err) {
+            // В случае ошибки выводим сообщение
             document.getElementById("route-info").innerHTML = 
                 `<span style="color:red">Ошибка маршрута: ${err.message || err}</span>`;
         });
-
-    // === Данные для графика ===
+    // Подготовка данных для сравнительного графика
     prepareComparison(origin);
 }
 
 function prepareComparison(startPoint) {
+    // Список точек для расчета расстояний
     const points = [
-        ["Арена", [48.0210, 37.8100]],
-        ["Вокзал", [48.0430, 37.7440]],
-        ["Парк", [47.9950, 37.7906]],
-        ["Донецк-Сити", [48.0303, 37.7874]],
-        ["Цирк", [47.9897, 37.7905]]
+        ["Арена",          [48.0210, 37.8101]],
+        ["Вокзал",         [48.0436, 37.7461]],
+        ["Парк Щербакова", [47.9950, 37.7906]],
+        ["Донецк-Сити",    [48.0303, 37.7874]],
+        ["Цирк Космос",    [47.9897, 37.7905]]
     ];
-
     const chartData = [];
     let readyCount = 0;
-
+    // Для каждой точки строим маршрут и собираем расстояние
     points.forEach(function (item) {
         ymaps.route([startPoint, item[1]])
             .then(function (res) {
+                // Сохраняем название точки и расстояние в километрах
                 chartData.push([item[0], res.getLength() / 1000]);
                 readyCount++;
+                // Когда все маршруты посчитаны - рисуем график
                 if (readyCount === points.length) {
                     drawGoogleChart(chartData);
                 }
-            })
-            .catch(function (err) {
-                console.error(`❌ Ошибка маршрута до ${item[0]}:`, err);
-                readyCount++; // продолжаем, даже если один упал
+            }).catch(function () {
+                readyCount++;
                 if (readyCount === points.length) {
                     drawGoogleChart(chartData);
                 }
@@ -81,19 +79,18 @@ function prepareComparison(startPoint) {
 }
 
 function drawGoogleChart(finalData) {
+    // Если данных нет - показываем сообщение об ошибке
     if (finalData.length === 0) {
-        console.warn('⚠ Нет данных для графика');
-        document.getElementById("chart").innerHTML = '<p style="color:red">Нет данных для графика (все маршруты упали)</p>';
+        document.getElementById("chart").innerHTML = 
+            '<p style="color:red; text-align:center;">Нет данных для графика</p>';
         return;
     }
-
+    // Рисуем график после загрузки Google Charts
     google.charts.setOnLoadCallback(function () {
-        console.log('✅ Google Charts рисует график');
         const table = new google.visualization.DataTable();
         table.addColumn('string', 'Направление');
         table.addColumn('number', 'Километры');
         table.addRows(finalData);
-
         const config = {
             title: "Сравнительный анализ протяженности путей",
             legend: { position: "bottom" },
@@ -102,7 +99,7 @@ function drawGoogleChart(finalData) {
             hAxis: { title: 'Направление' },
             vAxis: { title: 'Километры' }
         };
-
+        // Создаем линейный график в контейнере
         const plot = new google.visualization.LineChart(document.getElementById("chart"));
         plot.draw(table, config);
     });
